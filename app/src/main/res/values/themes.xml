@@ -6,9 +6,19 @@
         <item name="android:colorPrimary">#FF16A34A</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:alertDialogTheme">@style/Dialogo</item>
+    </style>
+    <style name="Dialogo" parent="@android:style/Theme.DeviceDefault.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialogo</item>
+        <item name="android:colorAccent">#FF4ADE80</item>
+        <item name="android:colorBackground">#FF16271E</item>
+        <item name="android:textColorPrimary">#FFFFFFFF</item>
+        <item name="android:textColorSecondary">#FFD3E2D8</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:backgroundDimAmount">0.6</item>
     </style>
     <style name="Tema.Jogo">
         <item name="android:windowFullscreen">true</item>
-        <item name="android:windowBackground">#FF143D22</item>
+        <item name="android:windowBackground">#FF0B1B3A</item>
     </style>
 </resources>

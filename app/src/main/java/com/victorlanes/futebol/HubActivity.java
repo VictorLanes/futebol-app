@@ -32,7 +32,7 @@ public class HubActivity extends Activity {
     private static final int REQ_JOGO = 5;
     private static final String[] ABAS = {"inicio", "elenco", "mercado", "clube", "torneios"};
     private static final String[] NOMES = {"Início", "Elenco", "Mercado", "Clube", "Torneios"};
-    private static final String[] ICONES = {"🏠", "👕", "🔁", "🏟️", "🏆"};
+    private static final int[] ICONES = {R.drawable.ic_inicio, R.drawable.ic_elenco, R.drawable.ic_mercado, R.drawable.ic_clube, R.drawable.ic_torneios};
 
     private Ui.Cores k;
     private Mundo m;
@@ -61,7 +61,8 @@ public class HubActivity extends Activity {
         raiz.addView(conteudo, Ui.lp(-1, 0, 1f));
         nav = Ui.linha(this);
         nav.setBackgroundColor(k.superficie);
-        nav.setPadding(dp(4), dp(6), dp(4), dp(8));
+        nav.setPadding(dp(4), dp(8), dp(4), dp(10));
+        nav.setElevation(dp(8));
         raiz.addView(nav, Ui.lp(-1, -2));
         mostrar();
     }
@@ -77,11 +78,17 @@ public class HubActivity extends Activity {
             boolean on = id.equals(aba);
             LinearLayout it = Ui.coluna(this);
             it.setGravity(Gravity.CENTER);
-            TextView ic = Ui.texto(this, ICONES[i], 20, 0, false);
-            ic.setGravity(Gravity.CENTER);
-            ic.setBackground(on ? Ui.fundo(k.chipSel, dp(14)) : null);
-            it.addView(ic, Ui.lp(dp(56), dp(32)));
-            it.addView(Ui.texto(this, NOMES[i], 11, on ? k.texto : k.sub, on));
+            FrameLayout pil = new FrameLayout(this);
+            pil.setBackground(on ? Ui.fundo(k.chipSel, dp(16)) : null);
+            android.widget.ImageView ic = new android.widget.ImageView(this);
+            ic.setImageResource(ICONES[i]);
+            ic.setColorFilter(on ? 0xFF4ADE80 : 0xFFC9D8CE);
+            pil.addView(ic, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+            it.addView(pil, Ui.lp(dp(60), dp(32)));
+            TextView nt = Ui.texto(this, NOMES[i], 12, on ? 0xFFFFFFFF : 0xFFC9D8CE, on);
+            nt.setGravity(Gravity.CENTER);
+            nt.setPadding(0, dp(3), 0, 0);
+            it.addView(nt, Ui.lp(-1, -2));
             it.setOnClickListener(v -> {
                 aba = id;
                 mostrar();
@@ -207,7 +214,7 @@ public class HubActivity extends Activity {
                 jogar.setOnClickListener(v -> {
                     jogoAtual = p;
                     int adv = p.casa == m.userId ? p.fora : p.casa;
-                    startActivityForResult(new Intent(this, PartidaActivity.class).putExtra("adv", adv), REQ_JOGO);
+                    startActivityForResult(new Intent(this, PartidaActivity.class).putExtra("adv", adv).putExtra("mataMata", p.mataMata), REQ_JOGO);
                 });
                 LinearLayout.LayoutParams jl = Ui.lp(-1, dp(60));
                 jl.topMargin = dp(12);
@@ -312,8 +319,14 @@ public class HubActivity extends Activity {
             String nome = s.substring(1);
             r.autores.add(((meu == casa) ? "C" : "F") + nome);
         }
-        String extra = "Chutes " + d.getIntExtra("chutes0", 0) + " x " + d.getIntExtra("chutes1", 0) + " · Posse " + d.getIntExtra("posse", 50) + "%";
-        if (p.mataMata && r.gc == r.gf) m.penaltis(r, m.clube(r.casa).forca(), m.clube(r.fora).forca());
+        String extra = "Chances criadas: " + d.getIntExtra("chances", 0) + " · Finalizações: " + d.getIntExtra("chutes", 0);
+        int pm = d.getIntExtra("penMeu", -1), pd = d.getIntExtra("penDeles", -1);
+        if (p.mataMata && r.gc == r.gf) {
+            if (pm >= 0 && pm != pd) {
+                r.pc = casa ? pm : pd;
+                r.pf = casa ? pd : pm;
+            } else m.penaltis(r, m.clube(r.casa).forca(), m.clube(r.fora).forca());
+        }
         concluir(p, r, extra);
     }
 
@@ -370,14 +383,32 @@ public class HubActivity extends Activity {
         });
         t.addView(auto);
         c.addView(t);
-        c.addView(new Ui.Chips(this, Modelo.FORMACOES, Modelo.FORMACOES, eu.formacao, id -> {
+        c.addView(new Ui.Chips(this, Modelo.FORMACOES, Modelo.FORMACOES, eu.posicoes == null ? eu.formacao : "", id -> {
             eu.formacao = id;
+            eu.posicoes = null;
             eu.autoEscalar();
             Sessao.salvar(this);
             mostrar();
         }).view);
-        c.addView(campinho(eu), Ui.lp(-1, dp(360)));
-        c.addView(Ui.texto(this, "Toque numa posição para trocar o jogador.", 12, k.sub, false));
+        float ment = eu.mentalidade();
+        String mt = ment > 0.53f ? "⚔️ Ofensiva: cria mais chances, mas deixa espaços atrás" : ment < 0.43f ? "🛡️ Defensiva: sofre menos chances, mas ataca pouco" : "⚖️ Equilibrada";
+        LinearLayout ml = Ui.linha(this);
+        ml.setGravity(Gravity.CENTER_VERTICAL);
+        ml.setPadding(0, dp(4), 0, dp(8));
+        ml.addView(Ui.texto(this, "Mentalidade: " + mt, 13, k.texto, false), Ui.lp(0, -2, 1f));
+        if (eu.posicoes != null) {
+            TextView rs = Ui.texto(this, "↺ Restaurar", 13, k.destaque, true);
+            rs.setPadding(dp(8), dp(6), 0, dp(6));
+            rs.setOnClickListener(v -> {
+                eu.posicoes = null;
+                Sessao.salvar(this);
+                mostrar();
+            });
+            ml.addView(rs);
+        }
+        c.addView(ml);
+        c.addView(campinho(eu), Ui.lp(-1, dp(400)));
+        c.addView(Ui.texto(this, "Arraste os jogadores para montar sua tática livremente · toque para trocar quem joga.", 13, k.sub, false));
 
         LinearLayout l = cartao(col);
         titulo(l, "Elenco (" + eu.elenco.size() + ") · folha " + Modelo.reais(eu.folhaSemanal()) + "/sem");
@@ -408,7 +439,7 @@ public class HubActivity extends Activity {
             }
         };
         f.addView(linhas, new FrameLayout.LayoutParams(-1, -1));
-        float[][] v = Modelo.vagas(eu.formacao);
+        float[][] v = eu.vagas();
         f.post(() -> {
             int w = f.getWidth(), h = f.getHeight();
             for (int i = 0; i < 11; i++) {
@@ -433,7 +464,7 @@ public class HubActivity extends Activity {
                 b.addView(nm, Ui.lp(dp(72), -2));
                 TextView ps = Ui.texto(this, Modelo.POS[pos], 9, 0xDDFFFFFF, false);
                 b.addView(ps);
-                b.setOnClickListener(x -> trocarVaga(eu, vaga, pos));
+                arrastavel(b, eu, vaga, pos, w, h);
                 float px = v[i][1] * w, py = h - (v[i][0] * (h - dp(60)) + dp(30));
                 FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(72), -2);
                 lp.leftMargin = (int) (px - dp(36));
@@ -442,6 +473,59 @@ public class HubActivity extends Activity {
             }
         });
         return f;
+    }
+
+    /** toque = trocar jogador; arrastar = mudar a posição livremente */
+    private void arrastavel(View b, Clube eu, int vaga, int pos, int w, int h) {
+        final float[] ini = new float[4];
+        final boolean[] moveu = {false};
+        b.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    ini[0] = e.getRawX();
+                    ini[1] = e.getRawY();
+                    moveu[0] = false;
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                    v.animate().scaleX(1.15f).scaleY(1.15f).setDuration(120).start();
+                    return true;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    float dx = e.getRawX() - ini[0], dy = e.getRawY() - ini[1];
+                    if (Math.hypot(dx, dy) > dp(8)) moveu[0] = true;
+                    if (moveu[0]) {
+                        v.setTranslationX(dx);
+                        v.setTranslationY(dy);
+                    }
+                    return true;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    v.animate().scaleX(1).scaleY(1).setDuration(120).start();
+                    v.getParent().requestDisallowInterceptTouchEvent(false);
+                    if (!moveu[0]) {
+                        if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) trocarVaga(eu, vaga, pos);
+                        return true;
+                    }
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) v.getLayoutParams();
+                    float cxp = lp.leftMargin + dp(36) + v.getTranslationX(), cyp = lp.topMargin + dp(24) + v.getTranslationY();
+                    float ny = Math.max(0.04f, Math.min(0.96f, cxp / w));
+                    float nx = Math.max(0.02f, Math.min(0.9f, (h - cyp - dp(30)) / (h - dp(60))));
+                    if (vaga == 0) nx = Math.min(nx, 0.1f);
+                    else nx = Math.max(nx, 0.12f);
+                    float[][] atual = eu.vagas();
+                    if (eu.posicoes == null) {
+                        eu.posicoes = new float[11][2];
+                        for (int i = 0; i < 11; i++) {
+                            eu.posicoes[i][0] = atual[i][0];
+                            eu.posicoes[i][1] = atual[i][1];
+                        }
+                    }
+                    eu.posicoes[vaga][0] = nx;
+                    eu.posicoes[vaga][1] = ny;
+                    Sessao.salvar(this);
+                    mostrar();
+                    return true;
+            }
+            return false;
+        });
     }
 
     static boolean dark(int c) {

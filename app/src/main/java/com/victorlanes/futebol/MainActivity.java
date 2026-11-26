@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
         col.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF14532D, 0xFF0A130E, 0xFF0A130E}));
         setContentView(col);
         Ui.aplicarInsets(col);
-        TextView bola = Ui.texto(this, "⚽", 80, 0, false);
+        TextView bola = Ui.texto(this, "⚽", 80, 0xFFFFFFFF, false);
         bola.setGravity(Gravity.CENTER);
         col.addView(bola);
         TextView t = Ui.texto(this, "CRAQUE MANAGER", 32, 0xFFFFFFFF, true);

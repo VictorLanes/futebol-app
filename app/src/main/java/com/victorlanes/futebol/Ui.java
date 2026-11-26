@@ -51,14 +51,14 @@ public final class Ui {
         Cores k = new Cores();
         if (escuro(c)) {
             k.fundo = 0xFF0A130E;
-            k.superficie = 0xFF13211A;
+            k.superficie = 0xFF16271E;
             k.cartao = 0xFF1B2D23;
             k.texto = 0xFFEAF5EE;
-            k.sub = 0xFF97AE9F;
+            k.sub = 0xFFBACDC1;
             k.destaque = 0xFF4ADE80;
             k.sobreDestaque = 0xFF04210F;
             k.linha = 0xFF24382D;
-            k.chip = 0xFF1B2D23;
+            k.chip = 0xFF22382B;
             k.chipSel = 0xFF1F5135;
         } else {
             k.fundo = 0xFFFFF8F3;

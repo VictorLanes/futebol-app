@@ -132,6 +132,7 @@ public final class Modelo {
         public List<Jogador> elenco = new ArrayList<>();
         public int[] titular = new int[11]; // ids dos jogadores por vaga
         public String formacao = "4-4-2";
+        public float[][] posicoes; // posições livres da tática (null = formação padrão)
         public long dinheiro;
         public int estadio = 1, ct = 1, base = 1; // níveis 1..10
         public int precoIngresso = 30;
@@ -142,9 +143,30 @@ public final class Modelo {
             return null;
         }
 
+        /** vagas efetivas: posições livres (se o técnico mexeu) ou da formação, com a função de cada uma */
+        public float[][] vagas() {
+            float[][] base = Modelo.vagas(formacao);
+            if (posicoes == null || posicoes.length != 11) return base;
+            float[][] v = new float[11][3];
+            for (int i = 0; i < 11; i++) {
+                v[i][0] = posicoes[i][0];
+                v[i][1] = posicoes[i][1];
+                v[i][2] = i == 0 ? 0 : funcao(posicoes[i][0], posicoes[i][1]);
+            }
+            return v;
+        }
+
+        /** mentalidade: profundidade média dos jogadores de linha (0 defensivo .. 1 ofensivo) */
+        public float mentalidade() {
+            float[][] v = vagas();
+            float s = 0;
+            for (int i = 1; i < 11; i++) s += v[i][0];
+            return s / 10f;
+        }
+
         /** escala o melhor time automaticamente para a formação atual */
         public void autoEscalar() {
-            float[][] v = vagas(formacao);
+            float[][] v = vagas();
             List<Jogador> livres = new ArrayList<>(elenco);
             titular = new int[11];
             Integer[] ordem = new Integer[11];
@@ -181,7 +203,7 @@ public final class Modelo {
         /** força do time: média das notas dos titulares nas suas vagas */
         public int forca() {
             validar();
-            float[][] v = vagas(formacao);
+            float[][] v = vagas();
             float s = 0;
             for (int i = 0; i < 11; i++) s += jogador(titular[i]).ovrEm((int) v[i][2]);
             return Math.round(s / 11);
@@ -202,7 +224,9 @@ public final class Modelo {
             for (Jogador j : elenco) el.put(j.json());
             JSONArray t = new JSONArray();
             for (int x : titular) t.put(x);
-            return new JSONObject().put("id", id).put("n", nome).put("s", sigla).put("uf", uf).put("pa", pais).put("d", divisao).put("r", reputacao)
+            JSONArray po = new JSONArray();
+            if (posicoes != null) for (float[] q : posicoes) po.put(new JSONArray().put(q[0]).put(q[1]));
+            return new JSONObject().put("po", po).put("id", id).put("n", nome).put("s", sigla).put("uf", uf).put("pa", pais).put("d", divisao).put("r", reputacao)
                     .put("c1", cor1).put("c2", cor2).put("el", el).put("t", t).put("f", formacao).put("$", dinheiro).put("es", estadio)
                     .put("ct", ct).put("ba", base).put("pi", precoIngresso).put("u", usuario);
         }
@@ -223,6 +247,14 @@ public final class Modelo {
             JSONArray t = o.optJSONArray("t");
             for (int i = 0; t != null && i < 11 && i < t.length(); i++) c.titular[i] = t.optInt(i);
             c.formacao = o.optString("f", "4-4-2");
+            JSONArray po = o.optJSONArray("po");
+            if (po != null && po.length() == 11) {
+                c.posicoes = new float[11][2];
+                for (int i = 0; i < 11; i++) {
+                    c.posicoes[i][0] = (float) po.optJSONArray(i).optDouble(0);
+                    c.posicoes[i][1] = (float) po.optJSONArray(i).optDouble(1);
+                }
+            }
             c.dinheiro = o.optLong("$");
             c.estadio = o.optInt("es", 1);
             c.ct = o.optInt("ct", 1);
@@ -231,6 +263,15 @@ public final class Modelo {
             c.usuario = o.optBoolean("u");
             return c;
         }
+    }
+
+    /** função pela zona do campo (x = profundidade, y = largura) */
+    public static int funcao(float x, float y) {
+        boolean lado = y < 0.22f || y > 0.78f;
+        if (x < 0.32f) return lado ? 2 : 1;
+        if (x < 0.46f) return lado ? 2 : 3;
+        if (x < 0.66f) return 4;
+        return 5;
     }
 
     public static final int[] CAPACIDADES = {5000, 9000, 14000, 20000, 28000, 36000, 46000, 56000, 68000, 80000};
